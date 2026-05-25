@@ -50,16 +50,10 @@ class SmsService
             }
         }
 
-        $activeDevice = $device
-            ?? Device::where('client_id', $client->id)
-                     ->where('status', 'online')
-                     ->where('gateway_enabled', true)
-                     ->first();
-
-        $message = DB::transaction(function () use ($data, $client, $apiKey, $activeDevice) {
+        $message = DB::transaction(function () use ($data, $client, $apiKey, $device) {
             $msg = SmsMessage::create([
                 'client_id'    => $client->id,
-                'device_id'    => $activeDevice?->id,
+                'device_id'    => $device?->id,
                 'api_key_id'   => $apiKey?->id,
                 'to_number'    => $data['to'],
                 'message_body' => $data['message'],
@@ -79,7 +73,7 @@ class SmsService
 
             SmsLog::create([
                 'client_id'      => $client->id,
-                'device_id'      => $activeDevice?->id,
+                'device_id'      => $device?->id,
                 'sms_message_id' => $msg->id,
                 'type'           => 'sms_created',
                 'level'          => 'info',
@@ -90,13 +84,7 @@ class SmsService
             return $msg;
         });
 
-        // Auto-dispatch: if a device is online, reserve + mark sent immediately
-        // The Android APK will also pick it up, but this ensures it doesn't stay pending
-        if ($activeDevice) {
-            $this->autoDispatch($message, $activeDevice, $client);
-        }
-
-        return ['success' => true, 'message' => $message->fresh()];
+        return ['success' => true, 'message' => $message];
     }
 
     public function reserveMessage(SmsMessage $message, Device $device): bool
