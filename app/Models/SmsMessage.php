@@ -19,6 +19,9 @@ class SmsMessage extends Model
     ];
 
     protected $casts = [
+        'client_id' => 'integer',
+        'device_id' => 'integer',
+        'api_key_id' => 'integer',
         'priority' => 'integer',
         'attempts' => 'integer',
         'max_attempts' => 'integer',
