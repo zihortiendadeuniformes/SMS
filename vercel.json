@@ -3,7 +3,7 @@
   "framework": null,
   "outputDirectory": "public",
   "functions": {
-    "api/index.php": {
+    "vercel-handler/index.php": {
       "runtime": "vercel-php@0.7.2"
     }
   },
@@ -14,7 +14,7 @@
     },
     {
       "src": "/(.*)",
-      "dest": "/api/index.php"
+      "dest": "/vercel-handler/index.php"
     }
   ],
   "build": {
