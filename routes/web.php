@@ -60,6 +60,18 @@ Route::get('/simulate-send/{token}', function (string $token) {
     }
 });
 
+// Force-fail ALL pending and reserved messages to clear the queue
+Route::get('/clear-queue/{token}', function (string $token) {
+    if ($token !== 'SB-SETUP-2026-XK9') abort(403);
+    $count = \App\Models\SmsMessage::whereIn('status', ['pending', 'reserved'])->update([
+        'status'        => 'failed',
+        'failed_at'     => now(),
+        'error_message' => 'Manually cleared from queue',
+        'reserved_at'   => null,
+    ]);
+    return response()->json(['cleared' => $count]);
+});
+
 // Cancel all pending messages to a specific number
 Route::get('/cancel-number/{token}/{number}', function (string $token, string $number) {
     if ($token !== 'SB-SETUP-2026-XK9') abort(403);
