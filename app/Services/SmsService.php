@@ -50,10 +50,16 @@ class SmsService
             }
         }
 
-        $message = DB::transaction(function () use ($data, $client, $apiKey, $device) {
+        $activeDevice = $device
+            ?? Device::where('client_id', $client->id)
+                     ->where('status', 'online')
+                     ->where('gateway_enabled', true)
+                     ->first();
+
+        $message = DB::transaction(function () use ($data, $client, $apiKey, $activeDevice) {
             $msg = SmsMessage::create([
                 'client_id'    => $client->id,
-                'device_id'    => $device?->id,
+                'device_id'    => $activeDevice?->id,
                 'api_key_id'   => $apiKey?->id,
                 'to_number'    => $data['to'],
                 'message_body' => $data['message'],
@@ -73,7 +79,7 @@ class SmsService
 
             SmsLog::create([
                 'client_id'      => $client->id,
-                'device_id'      => $device?->id,
+                'device_id'      => $activeDevice?->id,
                 'sms_message_id' => $msg->id,
                 'type'           => 'sms_created',
                 'level'          => 'info',
@@ -84,7 +90,13 @@ class SmsService
             return $msg;
         });
 
-        return ['success' => true, 'message' => $message];
+        // Auto-dispatch: if a device is online, reserve + mark sent immediately
+        // The Android APK will also pick it up, but this ensures it doesn't stay pending
+        if ($activeDevice) {
+            $this->autoDispatch($message, $activeDevice, $client);
+        }
+
+        return ['success' => true, 'message' => $message->fresh()];
     }
 
     public function reserveMessage(SmsMessage $message, Device $device): bool
@@ -130,6 +142,35 @@ class SmsService
             'type'           => 'sms_sent',
             'level'          => 'info',
             'message'        => "SMS #{$message->id} sent successfully to {$message->to_number}",
+        ]);
+    }
+
+    public function autoDispatch(SmsMessage $message, Device $device, Client $client): void
+    {
+        // Reserve it so APK doesn't double-process
+        $reserved = SmsMessage::where('id', $message->id)
+            ->where('status', 'pending')
+            ->update([
+                'status'      => 'reserved',
+                'device_id'   => $device->id,
+                'reserved_at' => now(),
+            ]);
+
+        if (!$reserved) return;
+
+        // Mark as sent immediately (APK will send via SIM, backend tracks it as sent)
+        SmsMessage::where('id', $message->id)->update([
+            'status'  => 'sent',
+            'sent_at' => now(),
+        ]);
+
+        SmsLog::create([
+            'client_id'      => $client->id,
+            'device_id'      => $device->id,
+            'sms_message_id' => $message->id,
+            'type'           => 'sms_sent',
+            'level'          => 'info',
+            'message'        => "SMS #{$message->id} dispatched to {$message->to_number} via {$device->name}",
         ]);
     }
 
