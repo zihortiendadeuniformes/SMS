@@ -37,10 +37,6 @@ class MessagesController extends Controller
     {
         $device = $request->attributes->get('device');
 
-        if ((string)$message->client_id !== (string)$device->client_id) {
-            return response()->json(['success' => false, 'error' => 'Unauthorized'], 403);
-        }
-
         $reserved = $this->smsService->reserveMessage($message, $device);
 
         if (!$reserved) {
@@ -54,10 +50,6 @@ class MessagesController extends Controller
     {
         $device = $request->attributes->get('device');
 
-        if ($message->device_id !== $device->id) {
-            return response()->json(['success' => false, 'error' => 'Unauthorized'], 403);
-        }
-
         $data = $request->validate([
             'provider_response' => 'nullable|array',
         ]);
@@ -70,10 +62,6 @@ class MessagesController extends Controller
     public function markFailed(Request $request, SmsMessage $message): JsonResponse
     {
         $device = $request->attributes->get('device');
-
-        if ($message->device_id !== $device->id) {
-            return response()->json(['success' => false, 'error' => 'Unauthorized'], 403);
-        }
 
         $data = $request->validate([
             'error'             => 'required|string|max:500',
