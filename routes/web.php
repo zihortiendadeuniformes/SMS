@@ -34,14 +34,28 @@ Route::get('/fix-messages/{token}', function (string $token) {
             }
         }
 
-        // Check what token the device has
         $deviceFull = \App\Models\Device::find($device?->id);
+        $msg1 = \App\Models\SmsMessage::find(1);
 
         return response()->json([
             'clients'           => $clients,
             'devices'           => $devices,
             'messages_pending'  => $messages,
-            'fix_target_device' => $device ? ['id'=>$device->id,'client_id'=>$device->client_id,'status'=>$device->status,'token_prefix'=>substr($deviceFull->device_token ?? '',0,10)] : null,
+            'fix_target_device' => $device ? [
+                'id'             => $device->id,
+                'client_id'      => $device->client_id,
+                'client_id_type' => gettype($device->client_id),
+                'status'         => $device->status,
+                'is_disabled'    => $device->isDisabled(),
+                'gateway_active' => $device->isGatewayActive(),
+                'token_prefix'   => substr($deviceFull->device_token ?? '',0,10),
+            ] : null,
+            'message_1' => $msg1 ? [
+                'client_id'      => $msg1->client_id,
+                'client_id_type' => gettype($msg1->client_id),
+                'status'         => $msg1->status,
+                'match'          => (string)$msg1->client_id === (string)$device->client_id,
+            ] : null,
             'messages_fixed'    => $fixed,
         ]);
     } catch (\Throwable $e) {
