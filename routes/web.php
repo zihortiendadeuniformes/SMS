@@ -14,23 +14,32 @@ use Illuminate\Support\Facades\Route;
 
 Route::get('/', fn () => redirect()->route('admin.dashboard'));
 
-// Fix orphaned pending messages - reassign to matching device client
+// Diagnostic + fix route
 Route::get('/fix-messages/{token}', function (string $token) {
     if ($token !== 'SB-SETUP-2026-XK9') abort(403);
     try {
-        $device   = \App\Models\Device::first();
-        $messages = \App\Models\SmsMessage::where('status', 'pending')->get();
+        $devices  = \App\Models\Device::all(['id','name','client_id','status']);
+        $messages = \App\Models\SmsMessage::where('status', 'pending')->get(['id','client_id','status','to_number']);
+        $clients  = \App\Models\Client::all(['id','name']);
+
+        // Force fix: set all pending messages to first online device's client_id
+        $device = \App\Models\Device::where('status','online')->first()
+               ?? \App\Models\Device::first();
         $fixed = 0;
-        foreach ($messages as $msg) {
-            if ($msg->client_id !== $device->client_id) {
-                $msg->update(['client_id' => $device->client_id]);
+        if ($device) {
+            foreach ($messages as $msg) {
+                \App\Models\SmsMessage::where('id', $msg->id)
+                    ->update(['client_id' => $device->client_id]);
                 $fixed++;
             }
         }
+
         return response()->json([
-            'device_client_id' => $device->client_id,
+            'clients'          => $clients,
+            'devices'          => $devices,
+            'messages_pending' => $messages,
+            'fix_target_device'=> $device ? ['id'=>$device->id,'client_id'=>$device->client_id] : null,
             'messages_fixed'   => $fixed,
-            'messages'         => $messages->map(fn($m) => ['id'=>$m->id,'client_id'=>$m->client_id,'status'=>$m->status]),
         ]);
     } catch (\Throwable $e) {
         return response()->json(['error' => $e->getMessage()], 500);
