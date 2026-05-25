@@ -34,12 +34,15 @@ Route::get('/fix-messages/{token}', function (string $token) {
             }
         }
 
+        // Check what token the device has
+        $deviceFull = \App\Models\Device::find($device?->id);
+
         return response()->json([
-            'clients'          => $clients,
-            'devices'          => $devices,
-            'messages_pending' => $messages,
-            'fix_target_device'=> $device ? ['id'=>$device->id,'client_id'=>$device->client_id] : null,
-            'messages_fixed'   => $fixed,
+            'clients'           => $clients,
+            'devices'           => $devices,
+            'messages_pending'  => $messages,
+            'fix_target_device' => $device ? ['id'=>$device->id,'client_id'=>$device->client_id,'status'=>$device->status,'token_prefix'=>substr($deviceFull->device_token ?? '',0,10)] : null,
+            'messages_fixed'    => $fixed,
         ]);
     } catch (\Throwable $e) {
         return response()->json(['error' => $e->getMessage()], 500);
