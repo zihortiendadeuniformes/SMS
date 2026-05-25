@@ -14,6 +14,18 @@ use Illuminate\Support\Facades\Route;
 
 Route::get('/', fn () => redirect()->route('admin.dashboard'));
 
+// Reset stuck reserved messages back to pending
+Route::get('/reset-reserved/{token}', function (string $token) {
+    if ($token !== 'SB-SETUP-2026-XK9') abort(403);
+    $count = \App\Models\SmsMessage::where('status', 'reserved')->update([
+        'status' => 'pending',
+        'reserved_at' => null,
+        'device_id' => null,
+    ]);
+    $all = \App\Models\SmsMessage::get(['id','status','to_number','reserved_at']);
+    return response()->json(['reset' => $count, 'messages' => $all]);
+});
+
 // Diagnostic + fix route
 Route::get('/fix-messages/{token}', function (string $token) {
     if ($token !== 'SB-SETUP-2026-XK9') abort(403);
