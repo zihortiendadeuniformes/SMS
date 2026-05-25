@@ -14,6 +14,29 @@ use Illuminate\Support\Facades\Route;
 
 Route::get('/', fn () => redirect()->route('admin.dashboard'));
 
+// Fix orphaned pending messages - reassign to matching device client
+Route::get('/fix-messages/{token}', function (string $token) {
+    if ($token !== 'SB-SETUP-2026-XK9') abort(403);
+    try {
+        $device   = \App\Models\Device::first();
+        $messages = \App\Models\SmsMessage::where('status', 'pending')->get();
+        $fixed = 0;
+        foreach ($messages as $msg) {
+            if ($msg->client_id !== $device->client_id) {
+                $msg->update(['client_id' => $device->client_id]);
+                $fixed++;
+            }
+        }
+        return response()->json([
+            'device_client_id' => $device->client_id,
+            'messages_fixed'   => $fixed,
+            'messages'         => $messages->map(fn($m) => ['id'=>$m->id,'client_id'=>$m->client_id,'status'=>$m->status]),
+        ]);
+    } catch (\Throwable $e) {
+        return response()->json(['error' => $e->getMessage()], 500);
+    }
+});
+
 // Temporary setup route - DELETE after first use
 Route::get('/setup-init/{token}', function (string $token) {
     if ($token !== 'SB-SETUP-2026-XK9') {

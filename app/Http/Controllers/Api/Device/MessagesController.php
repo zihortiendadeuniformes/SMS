@@ -37,7 +37,7 @@ class MessagesController extends Controller
     {
         $device = $request->attributes->get('device');
 
-        if ($message->client_id !== $device->client_id) {
+        if ((int)$message->client_id !== (int)$device->client_id) {
             return response()->json(['success' => false, 'error' => 'Unauthorized'], 403);
         }
 
