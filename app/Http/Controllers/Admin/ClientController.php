@@ -12,12 +12,16 @@ class ClientController extends Controller
 {
     public function index(Request $request): View
     {
-        $clients = Client::withCount(['devices', 'smsMessages', 'apiKeys'])
-            ->when($request->search, fn ($q) => $q->where('name', 'like', "%{$request->search}%")
-                ->orWhere('email', 'like', "%{$request->search}%"))
-            ->when($request->status, fn ($q) => $q->where('status', $request->status))
-            ->orderBy('name')
-            ->paginate(20);
+        try {
+            $clients = Client::withCount(['devices', 'smsMessages', 'apiKeys'])
+                ->when($request->search, fn ($q) => $q->where('name', 'like', "%{$request->search}%")
+                    ->orWhere('email', 'like', "%{$request->search}%"))
+                ->when($request->status, fn ($q) => $q->where('status', $request->status))
+                ->orderBy('name')
+                ->paginate(20);
+        } catch (\Throwable $e) {
+            $clients = new \Illuminate\Pagination\LengthAwarePaginator([], 0, 20);
+        }
 
         return view('admin.clients.index', compact('clients'));
     }

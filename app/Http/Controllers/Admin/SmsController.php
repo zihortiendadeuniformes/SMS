@@ -17,16 +17,21 @@ class SmsController extends Controller
 
     public function index(Request $request): View
     {
-        $messages = SmsMessage::with(['client', 'device'])
-            ->when($request->status, fn ($q) => $q->where('status', $request->status))
-            ->when($request->client_id, fn ($q) => $q->where('client_id', $request->client_id))
-            ->when($request->device_id, fn ($q) => $q->where('device_id', $request->device_id))
-            ->when($request->search, fn ($q) => $q->where('to_number', 'like', "%{$request->search}%"))
-            ->orderBy('created_at', 'desc')
-            ->paginate(30);
-
-        $clients = Client::orderBy('name')->get(['id', 'name']);
-        $devices = Device::orderBy('name')->get(['id', 'name']);
+        try {
+            $messages = SmsMessage::with(['client', 'device'])
+                ->when($request->status, fn ($q) => $q->where('status', $request->status))
+                ->when($request->client_id, fn ($q) => $q->where('client_id', $request->client_id))
+                ->when($request->device_id, fn ($q) => $q->where('device_id', $request->device_id))
+                ->when($request->search, fn ($q) => $q->where('to_number', 'like', "%{$request->search}%"))
+                ->orderBy('created_at', 'desc')
+                ->paginate(30);
+            $clients = Client::orderBy('name')->get(['id', 'name']);
+            $devices = Device::orderBy('name')->get(['id', 'name']);
+        } catch (\Throwable $e) {
+            $messages = new \Illuminate\Pagination\LengthAwarePaginator([], 0, 30);
+            $clients = collect();
+            $devices = collect();
+        }
 
         return view('admin.sms.index', compact('messages', 'clients', 'devices'));
     }

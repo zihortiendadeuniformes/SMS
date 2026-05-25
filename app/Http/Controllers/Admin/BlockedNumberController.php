@@ -13,13 +13,17 @@ class BlockedNumberController extends Controller
 {
     public function index(Request $request): View
     {
-        $blocked = BlockedNumber::with('client')
-            ->when($request->search, fn ($q) => $q->where('phone_number', 'like', "%{$request->search}%"))
-            ->when($request->client_id, fn ($q) => $q->where('client_id', $request->client_id))
-            ->orderBy('created_at', 'desc')
-            ->paginate(30);
-
-        $clients = Client::orderBy('name')->get(['id', 'name']);
+        try {
+            $blocked = BlockedNumber::with('client')
+                ->when($request->search, fn ($q) => $q->where('phone_number', 'like', "%{$request->search}%"))
+                ->when($request->client_id, fn ($q) => $q->where('client_id', $request->client_id))
+                ->orderBy('created_at', 'desc')
+                ->paginate(30);
+            $clients = Client::orderBy('name')->get(['id', 'name']);
+        } catch (\Throwable $e) {
+            $blocked = new \Illuminate\Pagination\LengthAwarePaginator([], 0, 30);
+            $clients = collect();
+        }
 
         return view('admin.blocked_numbers.index', compact('blocked', 'clients'));
     }

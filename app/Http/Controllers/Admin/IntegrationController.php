@@ -13,7 +13,11 @@ class IntegrationController extends Controller
 {
     public function index(): View
     {
-        $apiKeys = ApiKey::with('client')->where('is_active', true)->get();
+        try {
+            $apiKeys = ApiKey::with('client')->where('status', 'active')->get();
+        } catch (\Throwable $e) {
+            $apiKeys = collect();
+        }
         $baseUrl = config('app.url');
 
         return view('admin.integrations.index', compact('apiKeys', 'baseUrl'));

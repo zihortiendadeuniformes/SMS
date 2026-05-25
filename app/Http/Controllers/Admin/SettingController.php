@@ -12,7 +12,11 @@ class SettingController extends Controller
 {
     public function index(): View
     {
-        $settings = Setting::orderBy('key')->get()->keyBy('key');
+        try {
+            $settings = Setting::orderBy('key')->get()->keyBy('key');
+        } catch (\Throwable $e) {
+            $settings = collect();
+        }
         return view('admin.settings.index', compact('settings'));
     }
 

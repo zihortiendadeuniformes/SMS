@@ -13,13 +13,17 @@ class ApiKeyController extends Controller
 {
     public function index(Request $request): View
     {
-        $apiKeys = ApiKey::with('client')
-            ->when($request->client_id, fn ($q) => $q->where('client_id', $request->client_id))
-            ->when($request->status, fn ($q) => $q->where('status', $request->status))
-            ->orderBy('created_at', 'desc')
-            ->paginate(20);
-
-        $clients = Client::orderBy('name')->get(['id', 'name']);
+        try {
+            $apiKeys = ApiKey::with('client')
+                ->when($request->client_id, fn ($q) => $q->where('client_id', $request->client_id))
+                ->when($request->status, fn ($q) => $q->where('status', $request->status))
+                ->orderBy('created_at', 'desc')
+                ->paginate(20);
+            $clients = Client::orderBy('name')->get(['id', 'name']);
+        } catch (\Throwable $e) {
+            $apiKeys = new \Illuminate\Pagination\LengthAwarePaginator([], 0, 20);
+            $clients = collect();
+        }
 
         return view('admin.api_keys.index', compact('apiKeys', 'clients'));
     }

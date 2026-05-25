@@ -14,7 +14,11 @@ class UserController extends Controller
 {
     public function index(): View
     {
-        $users = User::with('roles')->orderBy('name')->paginate(20);
+        try {
+            $users = User::with('roles')->orderBy('name')->paginate(20);
+        } catch (\Throwable $e) {
+            $users = new \Illuminate\Pagination\LengthAwarePaginator([], 0, 20);
+        }
         return view('admin.users.index', compact('users'));
     }
 

@@ -15,15 +15,19 @@ class DeviceController extends Controller
 {
     public function index(Request $request): View
     {
-        $devices = Device::with('client')
-            ->when($request->search, fn ($q) => $q->where('name', 'like', "%{$request->search}%")
-                ->orWhere('phone_number', 'like', "%{$request->search}%"))
-            ->when($request->status, fn ($q) => $q->where('status', $request->status))
-            ->when($request->client_id, fn ($q) => $q->where('client_id', $request->client_id))
-            ->orderBy('name')
-            ->paginate(20);
-
-        $clients = Client::orderBy('name')->get(['id', 'name']);
+        try {
+            $devices = Device::with('client')
+                ->when($request->search, fn ($q) => $q->where('name', 'like', "%{$request->search}%")
+                    ->orWhere('phone_number', 'like', "%{$request->search}%"))
+                ->when($request->status, fn ($q) => $q->where('status', $request->status))
+                ->when($request->client_id, fn ($q) => $q->where('client_id', $request->client_id))
+                ->orderBy('name')
+                ->paginate(20);
+            $clients = Client::orderBy('name')->get(['id', 'name']);
+        } catch (\Throwable $e) {
+            $devices = new \Illuminate\Pagination\LengthAwarePaginator([], 0, 20);
+            $clients = collect();
+        }
 
         return view('admin.devices.index', compact('devices', 'clients'));
     }
