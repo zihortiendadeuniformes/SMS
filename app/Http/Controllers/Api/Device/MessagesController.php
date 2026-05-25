@@ -37,8 +37,16 @@ class MessagesController extends Controller
     {
         $device = $request->attributes->get('device');
 
+        \Illuminate\Support\Facades\Log::error('RESERVE_CHECK', [
+            'msg_client_id'    => $message->client_id,
+            'msg_client_type'  => gettype($message->client_id),
+            'dev_client_id'    => $device->client_id,
+            'dev_client_type'  => gettype($device->client_id),
+            'equal'            => $message->client_id == $device->client_id,
+            'strict'           => $message->client_id === $device->client_id,
+        ]);
         if ((int)$message->client_id !== (int)$device->client_id) {
-            return response()->json(['success' => false, 'error' => 'Unauthorized'], 403);
+            return response()->json(['success' => false, 'error' => 'Unauthorized', 'debug' => ['msg_cid' => $message->client_id, 'dev_cid' => $device->client_id]], 403);
         }
 
         $reserved = $this->smsService->reserveMessage($message, $device);
