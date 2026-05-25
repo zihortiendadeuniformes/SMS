@@ -22,10 +22,14 @@ class RegisterController extends Controller
             'app_version'    => 'nullable|string|max:20',
         ]);
 
-        $result = $this->deviceService->registerDevice(
-            $validated,
-            strtoupper(trim($validated['pairing_code']))
-        );
+        try {
+            $result = $this->deviceService->registerDevice(
+                $validated,
+                strtoupper(trim($validated['pairing_code']))
+            );
+        } catch (\Throwable $e) {
+            return response()->json(['success' => false, 'error' => $e->getMessage()], 500);
+        }
 
         if (!$result['success']) {
             return response()->json($result, 422);

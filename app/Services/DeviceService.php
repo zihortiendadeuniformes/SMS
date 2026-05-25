@@ -24,10 +24,6 @@ class DeviceService
             return ['success' => false, 'error' => 'Invalid pairing code'];
         }
 
-        if ($device->device_token) {
-            return ['success' => false, 'error' => 'Device already registered. Use regenerate token.'];
-        }
-
         return $this->activateDevice($device, $data);
     }
 
