@@ -165,14 +165,13 @@ class SmsService
     public function markFailed(SmsMessage $message, string $error, ?array $providerResponse = null): void
     {
         $attempts = $message->attempts + 1;
-        $canRetry = $attempts < $message->max_attempts;
 
         $message->update([
-            'status'            => $canRetry ? 'pending' : 'failed',
+            'status'            => 'failed',
             'attempts'          => $attempts,
             'error_message'     => $error,
             'provider_response' => $providerResponse,
-            'failed_at'         => $canRetry ? null : now(),
+            'failed_at'         => now(),
             'reserved_at'       => null,
         ]);
 

@@ -20,10 +20,11 @@ class MessagesController extends Controller
             return response()->json(['success' => true, 'messages' => []]);
         }
 
-        // Auto-confirm: messages reserved by this device >30s ago = APK sent it, mark as sent
+        // Auto-confirm: messages reserved by this device >15s ago = mark as sent
+        // (APK sends via SIM but markSent call may fail due to network)
         SmsMessage::where('status', 'reserved')
             ->where('device_id', $device->id)
-            ->where('reserved_at', '<', now()->subSeconds(30))
+            ->where('reserved_at', '<', now()->subSeconds(15))
             ->update(['status' => 'sent', 'sent_at' => now()]);
 
         $messages = SmsMessage::where('status', 'pending')
