@@ -14,6 +14,52 @@ use Illuminate\Support\Facades\Route;
 
 Route::get('/', fn () => redirect()->route('admin.dashboard'));
 
+// ── SIMULATION MODE ──────────────────────────────────────────────────────────
+// Marks all pending/reserved messages as sent (use when no phone with SIM)
+Route::get('/simulate-send/{token}', function (string $token) {
+    if ($token !== 'SB-SETUP-2026-XK9') abort(403);
+    try {
+        $device   = \App\Models\Device::where('status', 'online')->first()
+                 ?? \App\Models\Device::first();
+        $messages = \App\Models\SmsMessage::whereIn('status', ['pending', 'reserved'])->get();
+        $processed = 0;
+
+        foreach ($messages as $msg) {
+            \App\Models\SmsMessage::where('id', $msg->id)->update([
+                'status'    => 'sent',
+                'sent_at'   => now(),
+                'device_id' => $device?->id ?? $msg->device_id,
+                'error_message' => null,
+            ]);
+            \App\Models\SmsLog::create([
+                'client_id'  => $msg->client_id,
+                'device_id'  => $device?->id,
+                'message_id' => $msg->id,
+                'type'       => 'sms_sent',
+                'level'      => 'info',
+                'message'    => "[SIMULATION] SMS #{$msg->id} marked as sent to {$msg->to_number}",
+            ]);
+            $processed++;
+        }
+
+        // Update client usage counters
+        if ($device && $processed > 0) {
+            \App\Models\Client::where('id', $device->client_id)
+                ->increment('used_sms_today', $processed);
+            \App\Models\Client::where('id', $device->client_id)
+                ->increment('used_sms_month', $processed);
+        }
+
+        return response()->json([
+            'success'   => true,
+            'simulated' => $processed,
+            'messages'  => $messages->map(fn($m) => ['id'=>$m->id,'to'=>$m->to_number,'status'=>'sent']),
+        ]);
+    } catch (\Throwable $e) {
+        return response()->json(['error' => $e->getMessage()], 500);
+    }
+});
+
 // Reset stuck reserved messages back to pending
 Route::get('/reset-reserved/{token}', function (string $token) {
     if ($token !== 'SB-SETUP-2026-XK9') abort(403);
