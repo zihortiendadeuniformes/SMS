@@ -60,6 +60,15 @@ Route::get('/simulate-send/{token}', function (string $token) {
     }
 });
 
+// Cancel all pending messages to a specific number
+Route::get('/cancel-number/{token}/{number}', function (string $token, string $number) {
+    if ($token !== 'SB-SETUP-2026-XK9') abort(403);
+    $count = \App\Models\SmsMessage::whereIn('status', ['pending', 'reserved'])
+        ->where('to_number', $number)
+        ->update(['status' => 'failed', 'failed_at' => now(), 'error_message' => 'Cancelled: international SMS not supported']);
+    return response()->json(['cancelled' => $count, 'number' => $number]);
+});
+
 // Reset stuck reserved messages back to pending
 Route::get('/reset-reserved/{token}', function (string $token) {
     if ($token !== 'SB-SETUP-2026-XK9') abort(403);
