@@ -20,17 +20,18 @@ class MessagesController extends Controller
             return response()->json(['success' => true, 'messages' => []]);
         }
 
-        // Auto-confirm: messages reserved by this device >15s ago = mark as sent
+        // FAST MODE: Auto-confirm in 3 seconds for mass messaging
+        // (APK sends SMS via SIM in background, backend marks sent quickly)
         SmsMessage::where('status', 'reserved')
             ->where('device_id', $device->id)
-            ->where('reserved_at', '<', now()->subSeconds(15))
+            ->where('reserved_at', '<', now()->subSeconds(3))
             ->update(['status' => 'sent', 'sent_at' => now()]);
 
-        // Auto-fail: messages stuck in reserved for >2 min (markSent AND markFailed both failed)
+        // Auto-fail: messages stuck in reserved for >30 seconds (APK crashed or no network)
         SmsMessage::where('status', 'reserved')
             ->where('device_id', $device->id)
-            ->where('reserved_at', '<', now()->subMinutes(2))
-            ->update(['status' => 'failed', 'failed_at' => now(), 'error_message' => 'Timeout: no confirmation received']);
+            ->where('reserved_at', '<', now()->subSeconds(30))
+            ->update(['status' => 'failed', 'failed_at' => now(), 'error_message' => 'Timeout: device did not confirm']);
 
         $messages = SmsMessage::where('status', 'pending')
             ->where(function ($q) use ($device) {
