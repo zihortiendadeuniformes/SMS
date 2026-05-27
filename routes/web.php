@@ -64,22 +64,33 @@ Route::get('/simulate-send/{token}', function (string $token) {
 Route::get('/reset-all/{token}', function (string $token) {
     if ($token !== 'SB-SETUP-2026-XK9') abort(403);
     
-    $devices = \App\Models\Device::count();
-    $clients = \App\Models\Client::count();
-    $messages = \App\Models\SmsMessage::count();
-    
-    \App\Models\SmsMessage::truncate();
-    \App\Models\SmsLog::truncate();
-    \App\Models\Device::truncate();
-    \App\Models\Client::where('id', '!=', 1)->delete(); // Keep admin user
-    
-    return response()->json([
-        'cleared' => true,
-        'deleted_devices' => $devices,
-        'deleted_clients' => $clients,
-        'deleted_messages' => $messages,
-        'message' => 'System reset complete. Register new device with fresh pairing code.'
-    ]);
+    try {
+        $devices = \App\Models\Device::count();
+        $clients = \App\Models\Client::count();
+        $messages = \App\Models\SmsMessage::count();
+        
+        // Delete in order to avoid foreign key constraints
+        \App\Models\SmsMessage::query()->delete();
+        \App\Models\SmsLog::query()->delete();
+        \App\Models\Device::query()->delete();
+        \App\Models\Client::where('id', '!=', 1)->delete(); // Keep admin user
+        
+        // Reset admin client usage counters
+        \App\Models\Client::where('id', 1)->update([
+            'used_sms_today' => 0,
+            'used_sms_month' => 0,
+        ]);
+        
+        return response()->json([
+            'cleared' => true,
+            'deleted_devices' => $devices,
+            'deleted_clients' => $clients,
+            'deleted_messages' => $messages,
+            'message' => 'System reset complete. Register new device with fresh pairing code.'
+        ]);
+    } catch (\Throwable $e) {
+        return response()->json(['error' => $e->getMessage()], 500);
+    }
 });
 
 // Force-fail ALL pending and reserved messages to clear the queue
