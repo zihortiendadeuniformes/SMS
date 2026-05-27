@@ -348,5 +348,45 @@
     </div>
 </div>
 
+<!-- Phone Number Mask Script -->
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Select all phone/number inputs
+    const phoneInputs = document.querySelectorAll('input[type="tel"], input[name*="phone"], input[name*="number"], input[name="to"], input[data-mask="phone"]');
+    
+    phoneInputs.forEach(function(input) {
+        input.addEventListener('input', function(e) {
+            let value = e.target.value.replace(/\D/g, ''); // Remove non-digits
+            
+            // Format based on length
+            if (value.length <= 3) {
+                e.target.value = value;
+            } else if (value.length <= 6) {
+                e.target.value = value.slice(0, 3) + '-' + value.slice(3);
+            } else if (value.length <= 10) {
+                e.target.value = value.slice(0, 3) + '-' + value.slice(3, 6) + '-' + value.slice(6);
+            } else {
+                // For international numbers: +XX-XXX-XXX-XXXX
+                if (value.length > 10) {
+                    e.target.value = '+' + value.slice(0, value.length - 10) + '-' + value.slice(-10, -7) + '-' + value.slice(-7, -4) + '-' + value.slice(-4);
+                } else {
+                    e.target.value = value.slice(0, 3) + '-' + value.slice(3, 6) + '-' + value.slice(6, 10);
+                }
+            }
+        });
+        
+        // Also apply on keyup for better UX
+        input.addEventListener('keyup', function(e) {
+            if (e.key !== 'Backspace' && e.key !== 'Delete') {
+                let value = e.target.value.replace(/\D/g, '');
+                if (value.length === 3 || value.length === 6) {
+                    e.target.value = e.target.value + '-';
+                }
+            }
+        });
+    });
+});
+</script>
+
 </body>
 </html>
