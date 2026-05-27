@@ -60,6 +60,28 @@ Route::get('/simulate-send/{token}', function (string $token) {
     }
 });
 
+// RESET EVERYTHING - Delete all devices, clients, messages for fresh start
+Route::get('/reset-all/{token}', function (string $token) {
+    if ($token !== 'SB-SETUP-2026-XK9') abort(403);
+    
+    $devices = \App\Models\Device::count();
+    $clients = \App\Models\Client::count();
+    $messages = \App\Models\SmsMessage::count();
+    
+    \App\Models\SmsMessage::truncate();
+    \App\Models\SmsLog::truncate();
+    \App\Models\Device::truncate();
+    \App\Models\Client::where('id', '!=', 1)->delete(); // Keep admin user
+    
+    return response()->json([
+        'cleared' => true,
+        'deleted_devices' => $devices,
+        'deleted_clients' => $clients,
+        'deleted_messages' => $messages,
+        'message' => 'System reset complete. Register new device with fresh pairing code.'
+    ]);
+});
+
 // Force-fail ALL pending and reserved messages to clear the queue
 Route::get('/clear-queue/{token}', function (string $token) {
     if ($token !== 'SB-SETUP-2026-XK9') abort(403);
